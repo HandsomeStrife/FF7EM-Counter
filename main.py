@@ -154,6 +154,7 @@ def monitor_and_record(cap, template_path, output_path):
 
 
 def crop_recorded_video(recorded_video_path, section_template_path, output_cropped_path):
+    print("Cropping the recorded video...")
     section_template = cv2.imread(section_template_path, 0)  # Load the section template in grayscale
     cap = cv2.VideoCapture(recorded_video_path)
     if not cap.isOpened():
@@ -237,7 +238,7 @@ def main():
     if os.path.exists(output_path):
         for file in os.listdir(output_path):
             file_path = os.path.join(output_path, file)
-            if os.path.isfile(file_path):
+            if os.path.isfile(file_path) and file != ".gitignore":
                 os.remove(file_path)
     else:
         os.makedirs(output_path)
@@ -254,6 +255,7 @@ def main():
     output_cropped_path = os.path.join(output_path, 'cropped_video.mp4')
 
     crop_recorded_video(recorded_video_path, section_template_path, output_cropped_path)
+    print("Done!")
 
 
 if __name__ == "__main__":
