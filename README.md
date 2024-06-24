@@ -12,6 +12,9 @@ It might work on lower versions of Python, but I've only tried it on 3.12
 **FFMpeg** - You can check if you have FFMPEG installed by running `ffmpeg -version` in your terminal.
 
 ## Setup
+
+Make sure to run `pip install -r requirements.txt` to install the required packages.
+
 You will need to have OBS running with the websocket server running. 
 To do this, go to `Tools` -> `WebSockets Server Settings` and enable the websocket server. 
 You should enable authentication (for your safety), copy the password, and ensure its listening on port 4455.
