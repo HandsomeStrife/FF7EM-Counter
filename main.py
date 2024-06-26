@@ -240,6 +240,49 @@ def crop_recorded_video(recorded_video_path, templates_paths, output_cropped_pat
     print(f"Missed frames: {missed_frames}")
 
 
+def crop_to_center_square(input_video_path, output_video_path, fraction_of_min_dimension=0.5):
+    """
+    Crop the input video to a smaller square format, centered in the middle of the frame. The square's side length will be
+    a specified fraction of the frame's smallest dimension.
+
+    :param input_video_path: Path to the input video.
+    :param output_video_path: Path where the cropped video will be saved.
+    :param fraction_of_min_dimension: Fraction of the smallest frame dimension to use as the side of the square (default is 0.5).
+    """
+    cap = cv2.VideoCapture(input_video_path)
+    if not cap.isOpened():
+        print("Error opening video file.")
+        return
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    # Determine the size of the square based on the fraction of the smaller dimension of the frame
+    square_size = int(min(frame_width, frame_height) * fraction_of_min_dimension)
+
+    # Calculate top-left corner of the square (to keep it centered)
+    start_x = (frame_width - square_size) // 2
+    start_y = (frame_height - square_size) // 2
+
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_video_path, fourcc, fps, (square_size, square_size))
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Crop to the center square
+        square_frame = frame[start_y:start_y + square_size, start_x:start_x + square_size]
+        out.write(square_frame)
+
+    cap.release()
+    out.release()
+    print("Cropping to center square completed.")
+
+
 def analyze_glow_intervals(video_path, threshold=5):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -451,11 +494,27 @@ def main():
     #
     # save_failed_path = 'images'
     # crop_recorded_video(recorded_video_path, template_paths, output_cropped_path, save_failed_path)
-
-    output_cropped_path = 'video/cropped_video.mp4'
+    #
+    # output_cropped_path = 'video/cropped_video.mp4'
     dark_removed = 'video/cropped_video_ending_removed.mp4'
-    remove_darkening_frames(output_cropped_path, dark_removed)
-    intervals = analyze_glow_intervals(dark_removed, threshold=5)
+    # remove_darkening_frames(output_cropped_path, dark_removed)
+
+    # Further crop the video to a square in the middle
+    final_video_path = 'video/final_video.mp4'
+    crop_to_center_square(dark_removed, final_video_path, fraction_of_min_dimension=0.5)
+
+    # Return the video dimensions
+    cap = cv2.VideoCapture(final_video_path)
+    if not cap.isOpened():
+        print("Error opening video file.")
+        return
+
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    print(f"Video dimensions: {width}x{height}")
+    cap.release()
+
+    intervals = analyze_glow_intervals(final_video_path, threshold=3)
     intervals.reverse()
 
     # Remove any from the start that are less than 0.1 seconds

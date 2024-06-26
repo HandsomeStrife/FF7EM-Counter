@@ -91,7 +91,7 @@ def process_video(video_path, output_dir):
         height, width, _ = frame.shape
         centerX, centerY = width // 2, height // 2
         roi_size = int(
-            min(width, height) * 2 / 3)  # Define the size of the ROI to be two-thirds of the smallest dimension
+            min(width, height) * 1 / 2)  # Define the size of the ROI to be two-thirds of the smallest dimension
         center_frame = frame[centerY - roi_size // 2: centerY + roi_size // 2,
                        centerX - roi_size // 2: centerX + roi_size // 2]
 
@@ -140,7 +140,7 @@ for file in os.listdir(output_dir):
     else:
         os.remove(file_path)
 
-video_path = 'video/cropped_video_ending_removed.mp4'
+video_path = 'video/final_video.mp4'
 process_video(video_path, output_dir)
 
 blue_percentages, red_percentages = process_images_in_folder('images/normalised')

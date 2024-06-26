@@ -112,11 +112,17 @@ def process_video(video_path, output_dir):
 
 
 output_dir = 'images'
-# Delete all files in the output directory
+# Delete all folders and files
 for file in os.listdir(output_dir):
-    os.remove(os.path.join(output_dir, file))
+    file_path = os.path.join(output_dir, file)
+    if os.path.isdir(file_path):
+        for image_file in os.listdir(file_path):
+            os.remove(os.path.join(file_path, image_file))
+        os.rmdir(file_path)
+    else:
+        os.remove(file_path)
 
-video_path = 'video/cropped_video_ending_removed.mp4'
+video_path = 'video/final_video.mp4'
 process_video(video_path, output_dir)
 
 blue_percentages, red_percentages = process_images_in_folder('images/normalised')
