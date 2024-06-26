@@ -411,93 +411,93 @@ def remove_darkening_frames(video_path, output_path, middle_fraction=0.5, last_s
 
 
 def main():
-    # # Check if we have a password file
-    # if not os.path.exists("obs_password.txt"):
-    #     # Ask for the password and save it to a file
-    #     password = input("Enter the OBS WebSocket password: ")
-    #     with open("obs_password.txt", "w") as f:
-    #         f.write(password)
-    #
-    # # Read the password from the file
-    # with open("obs_password.txt", "r") as f:
-    #     password = f.read().strip()
-    #
-    # # User chooses the input source
-    # choice = input("Enter 'OBS' to use OBS Virtual Camera or 'file' to use a video file: ")
-    #
-    # if choice.lower() == 'obs':
-    #     client = connect_to_obs(password)
-    #     if not client:
-    #         return
-    #
-    #     # Check virtual camera status
-    #     virtual_cam_status = client.call(requests.GetVirtualCamStatus())
-    #     if not virtual_cam_status.getOutputActive():
-    #         print("Virtual Camera is not active, starting it...")
-    #         client.call(requests.StartVirtualCam())
-    #         time.sleep(2)  # Wait a moment for the virtual camera to start
-    #
-    #     # List available video devices
-    #     print("Listing available video devices...")
-    #     video_devices = list_video_devices()
-    #
-    #     # Find OBS Virtual Camera
-    #     new_camera_index = None
-    #     for index, name in video_devices:
-    #         if name == "OBS Virtual Camera":
-    #             new_camera_index = int(index)
-    #             break
-    #
-    #     if new_camera_index is None:
-    #         print("Failed to identify the OBS Virtual Camera.")
-    #         client.disconnect()
-    #         return
-    #
-    #     print(f"Using OBS Virtual Camera with index: {new_camera_index}")
-    #     cap = cv2.VideoCapture(new_camera_index)
-    #
-    # elif choice.lower() == 'file':
-    #     video_file_path = input("Enter the path to the video file: ")
-    #     cap = cv2.VideoCapture(video_file_path)
-    #     if not cap.isOpened():
-    #         print(f"Failed to open video file: {video_file_path}")
-    #         return
-    #
-    # else:
-    #     print("Invalid input. Exiting...")
-    #     return
-    #
-    # template_path = 'reference/aerith.png'  # Path to the template image
-    # output_path = 'video/'  # Path to save the output video
-    #
-    # # Delete any existing video
-    # if os.path.exists(output_path):
-    #     for file in os.listdir(output_path):
-    #         file_path = os.path.join(output_path, file)
-    #         if os.path.isfile(file_path) and file != ".gitignore":
-    #             os.remove(file_path)
-    # else:
-    #     os.makedirs(output_path)
-    #
-    # monitor_and_record(cap, template_path, output_path)
-    #
-    # cap.release()
-    # cv2.destroyAllWindows()
-    # if choice.lower() == 'obs':
-    #     client.disconnect()
-    #
-    # # Crop the recorded video
-    # recorded_video_path = os.path.join(output_path, 'recorded_video.mp4')
-    #
-    # template_paths = ['reference/1.png', 'reference/2.png', 'reference/3.png']
-    # output_cropped_path = os.path.join(output_path, 'cropped_video.mp4')
-    #
-    # save_failed_path = 'images'
-    # crop_recorded_video(recorded_video_path, template_paths, output_cropped_path, save_failed_path)
-    #
-    # output_cropped_path = 'video/cropped_video.mp4'
+    # Check if we have a password file
+    if not os.path.exists("obs_password.txt"):
+        # Ask for the password and save it to a file
+        password = input("Enter the OBS WebSocket password: ")
+        with open("obs_password.txt", "w") as f:
+            f.write(password)
+
+    # Read the password from the file
+    with open("obs_password.txt", "r") as f:
+        password = f.read().strip()
+
+    # User chooses the input source
+    choice = input("Enter 'OBS' to use OBS Virtual Camera or 'file' to use a video file: ")
+
+    if choice.lower() == 'obs':
+        client = connect_to_obs(password)
+        if not client:
+            return
+
+        # Check virtual camera status
+        virtual_cam_status = client.call(requests.GetVirtualCamStatus())
+        if not virtual_cam_status.getOutputActive():
+            print("Virtual Camera is not active, starting it...")
+            client.call(requests.StartVirtualCam())
+            time.sleep(2)  # Wait a moment for the virtual camera to start
+
+        # List available video devices
+        print("Listing available video devices...")
+        video_devices = list_video_devices()
+
+        # Find OBS Virtual Camera
+        new_camera_index = None
+        for index, name in video_devices:
+            if name == "OBS Virtual Camera":
+                new_camera_index = int(index)
+                break
+
+        if new_camera_index is None:
+            print("Failed to identify the OBS Virtual Camera.")
+            client.disconnect()
+            return
+
+        print(f"Using OBS Virtual Camera with index: {new_camera_index}")
+        cap = cv2.VideoCapture(new_camera_index)
+
+    elif choice.lower() == 'file':
+        video_file_path = input("Enter the path to the video file: ")
+        cap = cv2.VideoCapture(video_file_path)
+        if not cap.isOpened():
+            print(f"Failed to open video file: {video_file_path}")
+            return
+
+    else:
+        print("Invalid input. Exiting...")
+        return
+
+    template_path = 'reference/aerith.png'  # Path to the template image
+    output_path = 'video/'  # Path to save the output video
+
+    # Delete any existing video
+    if os.path.exists(output_path):
+        for file in os.listdir(output_path):
+            file_path = os.path.join(output_path, file)
+            if os.path.isfile(file_path) and file != ".gitignore":
+                os.remove(file_path)
+    else:
+        os.makedirs(output_path)
+
+    monitor_and_record(cap, template_path, output_path)
+
+    cap.release()
+    cv2.destroyAllWindows()
+    if choice.lower() == 'obs':
+        client.disconnect()
+
+    # Crop the recorded video
+    recorded_video_path = os.path.join(output_path, 'recorded_video.mp4')
+
+    template_paths = ['reference/1.png', 'reference/2.png', 'reference/3.png']
+    output_cropped_path = os.path.join(output_path, 'cropped_video.mp4')
+
+    save_failed_path = 'images'
+    crop_recorded_video(recorded_video_path, template_paths, output_cropped_path, save_failed_path)
+
+    output_cropped_path = 'video/cropped_video.mp4'
     dark_removed = 'video/cropped_video_ending_removed.mp4'
-    # remove_darkening_frames(output_cropped_path, dark_removed)
+    remove_darkening_frames(output_cropped_path, dark_removed)
 
     # Further crop the video to a square in the middle
     final_video_path = 'video/final_video.mp4'
@@ -520,6 +520,7 @@ def main():
     # Remove any from the start that are less than 0.1 seconds
     intervals = [interval for interval in intervals if interval > 0.1]
 
+    # Print the intervals found in the example video at https://www.youtube.com/watch?v=y7xrKBhm1as
     compare = ['1.49', '2.13', '1.44', '1.48', '2.75', '2.16', '1.43', '1.46', '2.13']
     compare_two = [1, 2, 1, 1, 3, 2, 1, 1, 2]
 
