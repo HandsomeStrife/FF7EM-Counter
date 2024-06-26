@@ -240,7 +240,7 @@ def crop_recorded_video(recorded_video_path, templates_paths, output_cropped_pat
     print(f"Missed frames: {missed_frames}")
 
 
-def analyze_center_color_changes(video_path):
+def analyze_glow_intervals(video_path, threshold=5):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("Error opening video file.")
@@ -259,9 +259,9 @@ def analyze_center_color_changes(video_path):
         # Define the region of interest (ROI) as the center of the frame
         height, width, _ = frame.shape
         centerX, centerY = width // 2, height // 2
-        roi_size = min(width, height) // 4  # Define the size of the ROI to be a quarter of the smallest dimension
-        roi = frame[centerY - roi_size // 2 : centerY + roi_size // 2,
-                    centerX - roi_size // 2 : centerX + roi_size // 2]
+        roi_size = min(width, height) // 2  # Define the size of the ROI to be a quarter of the smallest dimension
+        roi = frame[centerY - roi_size // 2: centerY + roi_size // 2,
+              centerX - roi_size // 2: centerX + roi_size // 2]
 
         # Convert ROI to HSV to better analyze color changes
         hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
@@ -270,22 +270,101 @@ def analyze_center_color_changes(video_path):
 
     cap.release()
 
-    # Analyze changes between consecutive frames
+    state = 'waiting_for_glow'  # Initial state
+    glow_start_time = None
+
     for i in range(1, len(colors_over_time)):
         prev_color = np.array(colors_over_time[i - 1])
         curr_color = np.array(colors_over_time[i])
 
         # Calculate the Euclidean distance between color vectors in HSV space
         color_change = np.linalg.norm(curr_color - prev_color)
-        if color_change > 5:  # Threshold for detecting a significant change
-            time_of_change = i / fps  # Calculate the time of change based on frame index and FPS
-            significant_changes.append(time_of_change)
+        current_time = i / fps  # Calculate the current time based on frame index and FPS
 
-    # Calculate intervals between detected glows
-    intervals = [round(significant_changes[i] - significant_changes[i - 1], 2) for i in range(1, len(significant_changes))]
-    # Filter out intervals less than 0.10 seconds
-    filtered_intervals = [interval for interval in intervals if interval >= 0.10]
-    return filtered_intervals
+        if state == 'waiting_for_glow' and color_change > threshold:  # Threshold for detecting a significant change
+            state = 'glow_detected'
+            glow_start_time = current_time
+        elif state == 'glow_detected' and color_change < threshold:  # Glow subsides
+            state = 'waiting_for_next_glow'
+        elif state == 'waiting_for_next_glow' and color_change > threshold:  # Next glow detected
+            interval = round(current_time - glow_start_time, 2)
+            if interval >= 0.10:  # Filter out intervals less than 0.10 seconds
+                significant_changes.append(interval)
+            state = 'glow_detected'
+            glow_start_time = current_time
+
+    return significant_changes
+
+
+def calculate_lowest_brightness(video_path, middle_fraction=0.1):
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Error opening video file.")
+        return None
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    middle_frame_start = int(total_frames * (0.5 - middle_fraction / 2))
+    middle_frame_end = int(total_frames * (0.5 + middle_fraction / 2))
+
+    print(f"Calculating lowest brightness for frames {middle_frame_start} to {middle_frame_end}...")
+
+    lowest_brightness = float('inf')
+
+    cap.set(cv2.CAP_PROP_POS_FRAMES, middle_frame_start)
+    for _ in range(middle_frame_end - middle_frame_start):
+        ret, frame = cap.read()
+        if not ret:
+            break
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        average_brightness = np.mean(gray_frame)
+        if average_brightness < lowest_brightness:
+            lowest_brightness = average_brightness
+
+    cap.release()
+    return lowest_brightness if lowest_brightness != float('inf') else None
+
+
+def remove_darkening_frames(video_path, output_path, middle_fraction=0.5, last_seconds=3):
+    brightness_threshold = calculate_lowest_brightness(video_path, middle_fraction)
+    if brightness_threshold is None:
+        print("Failed to determine brightness threshold.")
+        return
+
+    print(f"Determined brightness threshold: {brightness_threshold}")
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Error opening video file.")
+        return
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cutoff_frame = total_frames - int(fps * last_seconds)
+
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    frame_index = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        frame_index += 1
+
+        if frame_index >= cutoff_frame:
+            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            average_brightness = np.mean(gray_frame)
+            if average_brightness < brightness_threshold:
+                print("Stopping processing due to low brightness in the last 3 seconds: " + str(average_brightness))
+                break
+
+        out.write(frame)
+
+    cap.release()
+    out.release()
 
 
 def main():
@@ -374,28 +453,20 @@ def main():
     # crop_recorded_video(recorded_video_path, template_paths, output_cropped_path, save_failed_path)
 
     output_cropped_path = 'video/cropped_video.mp4'
-    intervals = analyze_center_color_changes(output_cropped_path)
+    dark_removed = 'video/cropped_video_ending_removed.mp4'
+    remove_darkening_frames(output_cropped_path, dark_removed)
+    intervals = analyze_glow_intervals(dark_removed, threshold=5)
     intervals.reverse()
-    print("Glow intervals in seconds:", intervals)
 
-    # # Detect significant changes in blue light intensity
-    # significant_times = detect_blue_light_changes(output_cropped_path, threshold=1)
-    #
-    # # Calculate intervals between significant changes
-    # intervals = calculate_intervals(significant_times)
-    #
-    # # Reverse the intervals
-    # intervals.reverse()
-    #
-    # # Remove any from the start that are less than 0.1 seconds
-    # intervals = [interval for interval in intervals if interval > 0.1]
-    #
-    # compare = ['1.49', '2.13', '1.44', '1.48', '2.75', '2.16', '1.43', '1.46', '2.13']
-    # compare_two = [1, 2, 1, 1, 3, 2, 1, 1, 2]
-    #
-    # for i, interval in enumerate(intervals):
-    #     if i < len(compare):
-    #         print(f"Interval {i + 1}: {interval}s | {compare[i]} | {compare_two[i]}")
+    # Remove any from the start that are less than 0.1 seconds
+    intervals = [interval for interval in intervals if interval > 0.1]
+
+    compare = ['1.49', '2.13', '1.44', '1.48', '2.75', '2.16', '1.43', '1.46', '2.13']
+    compare_two = [1, 2, 1, 1, 3, 2, 1, 1, 2]
+
+    for i, interval in enumerate(intervals):
+        if i < len(compare):
+            print(f"Interval {i + 1}: {interval}s | {compare[i]} | {compare_two[i]}")
 
 
 if __name__ == "__main__":

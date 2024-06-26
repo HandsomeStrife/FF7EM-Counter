@@ -1,0 +1,7 @@
+numpy==2.0.0
+obs-websocket-py==1.0
+opencv-python==4.10.0.84
+websocket-client==1.8.0
+
+moviepy~=1.0.3
+tqdm~=4.66.4

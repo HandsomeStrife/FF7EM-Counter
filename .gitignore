@@ -2,3 +2,5 @@ obs_password.txt
 video/*
 .DS_Store
 .idea
+images/*
+run.mp4
